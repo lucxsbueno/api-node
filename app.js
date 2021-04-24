@@ -1,3 +1,4 @@
+require("dotenv/config");
 const express = require("express");
 const app = express();
 const morgan = require("morgan");
@@ -9,6 +10,8 @@ const rotaPedidos = require("./routes/pedidos");
 app.use(morgan("dev")); // log de rotas
 app.use(bodyParser.urlencoded({extended: false})); // apenas dados simples
 app.use(bodyParser.json()); // json de entrada no body
+
+console.log(process.env.MYSQL_PORT);
 
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*"); // "*" ou "http://servidorespecifico.com.br"
