@@ -2,10 +2,12 @@ require("dotenv/config");
 const express = require("express");
 const app = express();
 const morgan = require("morgan");
+app.use("/uploads", express.static("uploads"));
 const bodyParser = require("body-parser");
 
 const rotaProdutos = require("./routes/produtos");
 const rotaPedidos = require("./routes/pedidos");
+const rotaUsuarios = require("./routes/usuarios");
 
 app.use(morgan("dev")); // log de rotas
 app.use(bodyParser.urlencoded({extended: false})); // apenas dados simples
@@ -28,6 +30,7 @@ app.use((req, res, next) => {
 
 app.use("/produtos", rotaProdutos);
 app.use("/pedidos", rotaPedidos);
+app.use("/usuarios", rotaUsuarios);
 
 app.use((req, res, next) => {
     const erro = new Error("Não encontrado");

@@ -1,7 +1,41 @@
+const login = require("../middleware/login");
 const express = require('express');
 const router = express.Router();
 
 const mysql = require("./mysql");
+
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+    destination: function (req, file, callback) {
+        callback(null, "./uploads/");
+    },
+    filename: function (req, file, callback) {
+        let data = new Date().toISOString().replace(/:/g, '-') + '-';
+        callback(null, data + file.originalname );
+    }
+});
+
+const filter = (req, file, callback) => {
+    const archive = "image/";
+    const mimeTypes = [archive+"jpg", archive+"png", archive+"jpeg"];
+    mimeTypes.forEach(type => {
+        if(file.mimetype == type){
+            callback(null, true);
+        } else {
+            callback(null, false);
+        }
+    });
+};
+
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        // 5mb
+        fileSize: 1024 * 1024 * 5
+    },
+    fileFilter: filter
+});
 
 // RETORNA TODOS OS PRODUTOS
 router.get("/", (req, res, next) => {
@@ -23,6 +57,7 @@ router.get("/", (req, res, next) => {
                             id_produto: prod.id_produto,
                             nome: prod.nome,
                             preco: prod.preco,
+                            imagem_produto: "http:/localhost:3000/"+prod.produto_imagem,
                             request: {
                                 tipo: "GET",
                                 descricao: "Retorna todos os produtos.",
@@ -41,15 +76,17 @@ router.get("/", (req, res, next) => {
 });
 
 // INSERE UM PRODUTO
-router.post("/", (req, res, next) => {
+router.post("/", login.obrigatorio, upload.single("produto_imagem"), (req, res, next) => {
+
+    console.log(req.file);
 
     mysql.getConnection((error, conn) => {
         
         if (error) { return res.status(500).send({ error: error }); }
 
         conn.query(
-            "INSERT INTO produtos (nome, preco) VALUES (?, ?)",
-            [req.body.nome, req.body.preco],
+            "INSERT INTO produtos (nome, preco, produto_imagem) VALUES (?, ?, ?)",
+            [ req.body.nome, req.body.preco, req.file.path ],
             (err, results, fields) => {
 
                 conn.release();
@@ -68,6 +105,7 @@ router.post("/", (req, res, next) => {
                         id_produto: results.id_produto,
                         nome: req.body.nome,
                         preco: req.body.preco,
+                        image_produto: "http:/localhost:3000/"+req.file.path,
                         request: {
                             tipo: "POST",
                             descricao: "Insere um produto.",
@@ -123,7 +161,7 @@ router.get("/:id_produto", (req, res, next) => {
 });
 
 // ALTERA UM PRODUTO
-router.patch("/", (req, res, next) => {
+router.patch("/", login.obrigatorio, (req, res, next) => {
     
     mysql.getConnection((error, conn) => {
         
@@ -169,7 +207,7 @@ router.patch("/", (req, res, next) => {
 });
 
 // EXCLUI UM PRODUTO
-router.delete("/", (req, res, next) => {
+router.delete("/", login.obrigatorio, (req, res, next) => {
 
     mysql.getConnection((error, conn) => {
         if (error) { return res.status(500).send({ error: error }); }
@@ -182,7 +220,7 @@ router.delete("/", (req, res, next) => {
                     msg: "Produto excluído com sucesso!",
                     request: {
                         tipo: "POST",
-                        descricao: "Exclui um produto",
+                        descricao: "Exclui um produto.",
                         url: "http://localhost:3000/produtos",
                         body: {
                             nome: "String",
